@@ -15,7 +15,6 @@ import (
 	_ "github.com/ipld/go-ipld-prime/codec/dagjson"
 	_ "github.com/ipld/go-ipld-prime/codec/json"
 	_ "github.com/ipld/go-ipld-prime/codec/raw"
-	"github.com/ipld/go-ipld-prime/traversal"
 
 	blocks "github.com/ipfs/go-block-format"
 	"github.com/ipfs/go-cid"
@@ -224,9 +223,9 @@ func (cfg Config) Traverse(
 
 	progress.LastBlock.Link = cidlink.Link{Cid: cfg.Root}
 	var lastPath datamodel.Path
-	visitor := func(p traversal.Progress, n datamodel.Node, vr traversal.VisitReason) error {
+	visitor := func(p ipldtraversal.Progress, n datamodel.Node, vr ipldtraversal.VisitReason) error {
 		lastPath = p.Path
-		if vr == traversal.VisitReason_SelectionMatch {
+		if vr == ipldtraversal.VisitReason_SelectionMatch {
 			return unixfsnode.BytesConsumingMatcher(p, n)
 		}
 		return nil
