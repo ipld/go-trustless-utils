@@ -8,7 +8,6 @@ const (
 	FormatParameterCar         = "car"                                 // The only valid format parameter value
 	FilenameExtCar             = ".car"                                // The only valid filename extension
 	DefaultIncludeDupes        = true                                  // The default value for an unspecified "dups" parameter. See https://github.com/ipfs/specs/pull/412.
-	ResponseAcceptRangesHeader = "bytes"                               // The only valid value for the Accept-Ranges header
 	ResponseCacheControlHeader = "public, max-age=29030400, immutable" // Magic cache control values
 )
 
