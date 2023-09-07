@@ -17,7 +17,6 @@ import (
 
 	blocks "github.com/ipfs/go-block-format"
 	"github.com/ipfs/go-cid"
-	gstestutil "github.com/ipfs/go-graphsync/testutil"
 	"github.com/ipfs/go-unixfsnode"
 	unixfs "github.com/ipfs/go-unixfsnode/testutil"
 	"github.com/ipld/go-car/v2"
@@ -33,6 +32,7 @@ import (
 	"github.com/ipld/go-ipld-prime/traversal/selector"
 	"github.com/ipld/go-ipld-prime/traversal/selector/builder"
 	selectorparse "github.com/ipld/go-ipld-prime/traversal/selector/parse"
+	gstestutil "github.com/ipld/go-trustless-utils/testutil"
 	trustlesspathing "github.com/ipld/ipld/specs/pkg-go/trustless-pathing"
 	mh "github.com/multiformats/go-multihash"
 	"github.com/stretchr/testify/require"
