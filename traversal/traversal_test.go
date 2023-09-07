@@ -41,7 +41,7 @@ import (
 func TestUnixfs20mVariety(t *testing.T) {
 	req := require.New(t)
 
-	testCases, err := trustlesspathing.Unixfs20mVarietyCases()
+	testCases, _, err := trustlesspathing.Unixfs20mVarietyCases()
 	req.NoError(err)
 	storage, closer, err := trustlesspathing.Unixfs20mVarietyReadableStorage()
 	req.NoError(err)
