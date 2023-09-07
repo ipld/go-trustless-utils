@@ -24,8 +24,11 @@ var (
 	ResponseChunkDelimeter = []byte("0\r\n") // An http/1.1 chunk delimeter, used for specifying an early end to the response
 )
 
+// ContentType represents a Content-Type descriptor for use with the response
+// Content-Type header or the request Accept header specifically for
+// Trustless Gateway requests and responses.
 type ContentType struct {
-	Mime       string
+	MimeType   string
 	Order      ContentTypeOrder
 	Duplicates bool
 	Quality    float32
@@ -33,7 +36,7 @@ type ContentType struct {
 
 func (ct ContentType) String() string {
 	sb := strings.Builder{}
-	sb.WriteString(ct.Mime)
+	sb.WriteString(ct.MimeType)
 	sb.WriteString(";version=")
 	sb.WriteString(MimeTypeCarVersion)
 	sb.WriteString(";order=")
@@ -51,55 +54,53 @@ func (ct ContentType) String() string {
 	return sb.String()
 }
 
-type ContentTypeOption func(ct *ContentType)
-
-func WithContentTypeOrder(order ContentTypeOrder) ContentTypeOption {
-	return func(ct *ContentType) {
-		ct.Order = order
-	}
+// WithOrder returns a new ContentType with the specified order.
+func (ct ContentType) WithOrder(order ContentTypeOrder) ContentType {
+	ct.Order = order
+	return ct
 }
 
-func WithContentTypeDuplicates(duplicates bool) ContentTypeOption {
-	return func(ct *ContentType) {
-		ct.Duplicates = duplicates
-	}
+// WithDuplicates returns a new ContentType with the specified duplicates.
+func (ct ContentType) WithDuplicates(duplicates bool) ContentType {
+	ct.Duplicates = duplicates
+	return ct
 }
 
-func WithContentTypeQuality(quality float32) ContentTypeOption {
-	return func(ct *ContentType) {
-		ct.Quality = quality
-	}
+// WithMime returns a new ContentType with the specified mime type.
+func (ct ContentType) WithMimeType(mime string) ContentType {
+	ct.MimeType = mime
+	return ct
 }
 
-func NewContentType(opt ...ContentTypeOption) ContentType {
-	ct := ContentType{
-		Mime:       MimeTypeCar,
+// WithQuality returns a new ContentType with the specified quality.
+func (ct ContentType) WithQuality(quality float32) ContentType {
+	ct.Quality = quality
+	return ct
+}
+
+func DefaultContentType() ContentType {
+	return ContentType{
+		MimeType:   MimeTypeCar,
 		Order:      DefaultOrder,
 		Duplicates: DefaultIncludeDupes,
 		Quality:    1,
 	}
-	for _, o := range opt {
-		o(&ct)
-	}
-	return ct
 }
 
 // ResponseContentTypeHeader returns the value for the Content-Type header for a
 // Trustless Gateway response which will vary depending on whether duplicates
 // are included or not. Otherwise, the header is the same for all responses.
 //
-// Deprecated: Use NewContentType().String() instead.
+// Deprecated: Use DefaultContentType().WithDuplicates(duplicates).String() instead.
 func ResponseContentTypeHeader(duplicates bool) string {
-	ct := NewContentType()
-	ct.Duplicates = duplicates
-	return ct.String()
+	return DefaultContentType().WithDuplicates(duplicates).String()
 }
 
 // RequestAcceptHeader returns the value for the Accept header for a Trustless
 // Gateway request which will vary depending on whether duplicates are included
 // or not. Otherwise, the header is the same for all requests.
 //
-// Deprecated: Use NewContentType().String() instead.
+// Deprecated: Use DefaultContentType().WithDuplicates(duplicates).String() instead.
 func RequestAcceptHeader(duplicates bool) string {
 	return ResponseContentTypeHeader(duplicates)
 }

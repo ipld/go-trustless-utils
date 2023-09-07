@@ -97,7 +97,7 @@ func CheckFormat(req *http.Request) (ContentType, error) {
 	}
 
 	if validFormat {
-		return NewContentType(), nil // default is acceptable in this case (no accept but format=car)
+		return DefaultContentType(), nil // default is acceptable in this case (no accept but format=car)
 	}
 
 	return ContentType{}, fmt.Errorf("neither a valid Accept header nor format parameter were provided")
@@ -140,8 +140,7 @@ func parseContentType(header string, strictType bool) (ContentType, bool) {
 	typeParts := strings.Split(header, ";")
 	mime := strings.TrimSpace(typeParts[0])
 	if mime == MimeTypeCar || (!strictType && (mime == "*/*" || mime == "application/*")) {
-		contentType := NewContentType()
-		contentType.Mime = mime
+		contentType := DefaultContentType().WithMimeType(mime)
 		// parse additional car attributes outlined in IPIP-412
 		// https://specs.ipfs.tech/http-gateways/trustless-gateway/
 		for _, nextPart := range typeParts[1:] {
