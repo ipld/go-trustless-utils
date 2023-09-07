@@ -106,22 +106,22 @@ func TestParseFilename(t *testing.T) {
 
 func TestCheckFormat(t *testing.T) {
 	for _, tc := range []struct {
-		name       string
-		accept     string
-		query      string
-		expectDups bool
-		err        string
+		name         string
+		accept       string
+		query        string
+		expectAccept trustlesshttp.ContentType
+		err          string
 	}{
-		{"empty (err)", "", "", false, "neither a valid Accept header nor format parameter were provided"},
-		{"format=bop (err)", "", "format=bop", true, "invalid format parameter; unsupported: \"bop\""},
-		{"format=car", "", "format=car", true, ""},
-		{"plain accept", "application/vnd.ipld.car", "", true, ""},
-		{"accept dups", "application/vnd.ipld.car; dups=y", "", true, ""},
-		{"accept no dups", "application/vnd.ipld.car; dups=n", "", false, ""},
-		{"accept no dups and cruft", "application/vnd.ipld.car; dups=n; bip; bop", "", false, ""},
-		{"valid accept but format=bop (err)", "application/vnd.ipld.car; dups=y", "format=bop", true, "invalid format parameter; unsupported: \"bop\""},
-		{"valid accept but format=car", "application/vnd.ipld.car; dups=y", "format=car", true, ""},
-		{"invalid accept but format=car", "application/vnd.ipld.car; dups=YES!", "format=car", false, "invalid Accept header; unsupported"},
+		{"empty (err)", "", "", trustlesshttp.ContentType{}, "neither a valid Accept header nor format parameter were provided"},
+		{"format=bop (err)", "", "format=bop", trustlesshttp.NewContentType(), "invalid format parameter; unsupported: \"bop\""},
+		{"format=car", "", "format=car", trustlesshttp.NewContentType(), ""},
+		{"plain accept", "application/vnd.ipld.car", "", trustlesshttp.NewContentType(), ""},
+		{"accept dups", "application/vnd.ipld.car; dups=y", "", trustlesshttp.NewContentType(), ""},
+		{"accept no dups", "application/vnd.ipld.car; dups=n", "", trustlesshttp.NewContentType(trustlesshttp.WithContentTypeDuplicates(false)), ""},
+		{"accept no dups and cruft", "application/vnd.ipld.car; dups=n; bip; bop", "", trustlesshttp.NewContentType(trustlesshttp.WithContentTypeDuplicates(false)), ""},
+		{"valid accept but format=bop (err)", "application/vnd.ipld.car; dups=y", "format=bop", trustlesshttp.NewContentType(), "invalid format parameter; unsupported: \"bop\""},
+		{"valid accept but format=car", "application/vnd.ipld.car; dups=y", "format=car", trustlesshttp.NewContentType(), ""},
+		{"invalid accept but format=car", "application/vnd.ipld.car; dups=YES!", "format=car", trustlesshttp.NewContentType(trustlesshttp.WithContentTypeDuplicates(false)), "invalid Accept header; unsupported"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			req := &http.Request{}
@@ -129,10 +129,10 @@ func TestCheckFormat(t *testing.T) {
 			if tc.accept != "" {
 				req.Header = http.Header{"Accept": []string{tc.accept}}
 			}
-			dups, err := trustlesshttp.CheckFormat(req)
+			accept, err := trustlesshttp.CheckFormat(req)
 			if tc.err == "" {
 				require.NoError(t, err)
-				require.Equal(t, tc.expectDups, dups)
+				require.Equal(t, tc.expectAccept, accept)
 			} else {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), tc.err)
@@ -141,39 +141,80 @@ func TestCheckFormat(t *testing.T) {
 	}
 }
 
-func TestParseAcceptAndContentType(t *testing.T) {
+func TestParseContentType(t *testing.T) {
 	for _, tc := range []struct {
 		name                   string
 		accept                 string
-		expectValidAccept      bool
 		expectValidContentType bool
 		expectDups             bool
 	}{
-		{"empty (err)", "", false, false, true},
-		{"plain", "application/vnd.ipld.car", true, true, true},
-		{"*/*", "*/*", true, false, true},
-		{"application/*", "application/*", true, false, true},
-		{"dups", "application/vnd.ipld.car; dups=y", true, true, true},
-		{"no dups", "application/vnd.ipld.car; dups=n", true, true, false},
-		{"no dups and cruft", "application/vnd.ipld.car; dups=n; bip; bop", true, true, false},
-		{"version=1", "application/vnd.ipld.car; version=1; dups=n", true, true, false},
-		{"version=2", "application/vnd.ipld.car; version=2; dups=n", false, false, false},
-		{"order=dfs", "application/vnd.ipld.car; order=dfs; dups=n", true, true, false},
-		{"order=unk", "application/vnd.ipld.car; order=unk; dups=n", true, true, false},
-		{"order=bork", "application/vnd.ipld.car; order=bork; dups=y", false, false, true},
-		{"complete", "application/vnd.ipld.car; order=dfs; dups=y; version=1", true, true, true},
-		{"complete (squish)", "application/vnd.ipld.car;order=dfs;dups=y;version=1", true, true, true},
-		{"complete (shuffle)", "application/vnd.ipld.car;version=1;dups=y;order=dfs;", true, true, true},
-		{"complete (cruft)", "application/vnd.ipld.car;;version=1; bip ;   dups=n ;bop;order=dfs;--", true, true, false},
+		{"empty (err)", "", false, false},
+		{"plain", "application/vnd.ipld.car", true, true},
+		{"*/*", "*/*", false, false},
+		{"application/*", "application/*", false, false},
+		{"dups", "application/vnd.ipld.car; dups=y", true, true},
+		{"no dups", "application/vnd.ipld.car; dups=n", true, false},
+		{"no dups and cruft", "application/vnd.ipld.car; dups=n; bip; bop", true, false},
+		{"version=1", "application/vnd.ipld.car; version=1; dups=n", true, false},
+		{"version=2", "application/vnd.ipld.car; version=2; dups=n", false, false},
+		{"order=dfs", "application/vnd.ipld.car; order=dfs; dups=n", true, false},
+		{"order=unk", "application/vnd.ipld.car; order=unk; dups=n", true, false},
+		{"order=bork", "application/vnd.ipld.car; order=bork; dups=y", false, false},
+		{"complete", "application/vnd.ipld.car; order=dfs; dups=y; version=1", true, true},
+		{"complete (squish)", "application/vnd.ipld.car;order=dfs;dups=y;version=1", true, true},
+		{"complete (shuffle)", "application/vnd.ipld.car;version=1;dups=y;order=dfs;", true, true},
+		{"complete (cruft)", "application/vnd.ipld.car;;version=1; bip ;   dups=n ;bop;order=dfs;--", true, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			valid, dups := trustlesshttp.ParseAccept(tc.accept)
-			require.Equal(t, tc.expectValidAccept, valid)
-			require.Equal(t, tc.expectDups, dups)
-
-			valid, dups = trustlesshttp.ParseContentType(tc.accept)
+			valid, dups := trustlesshttp.ParseContentType(tc.accept)
 			require.Equal(t, tc.expectValidContentType, valid)
 			require.Equal(t, tc.expectDups, dups)
+		})
+	}
+}
+
+func TestParseAccept(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		accept   string
+		expected []trustlesshttp.ContentType
+	}{
+		{"empty (err)", "", []trustlesshttp.ContentType{}},
+		{"plain", "application/vnd.ipld.car", []trustlesshttp.ContentType{{Mime: trustlesshttp.MimeTypeCar, Duplicates: true, Order: trustlesshttp.ContentTypeOrderDfs, Quality: 1.0}}},
+		{"*/*", "*/*", []trustlesshttp.ContentType{{Mime: "*/*", Duplicates: true, Order: trustlesshttp.ContentTypeOrderDfs, Quality: 1.0}}},
+		{"application/*", "application/*", []trustlesshttp.ContentType{{Mime: "application/*", Duplicates: true, Order: trustlesshttp.ContentTypeOrderDfs, Quality: 1.0}}},
+		{"dups", "application/vnd.ipld.car; dups=y", []trustlesshttp.ContentType{{Mime: trustlesshttp.MimeTypeCar, Duplicates: true, Order: trustlesshttp.ContentTypeOrderDfs, Quality: 1.0}}},
+		{"no dups", "application/vnd.ipld.car; dups=n", []trustlesshttp.ContentType{{Mime: trustlesshttp.MimeTypeCar, Duplicates: false, Order: trustlesshttp.ContentTypeOrderDfs, Quality: 1.0}}},
+		{"no dups and cruft", "application/vnd.ipld.car; dups=n; bip; bop", []trustlesshttp.ContentType{{Mime: trustlesshttp.MimeTypeCar, Duplicates: false, Order: trustlesshttp.ContentTypeOrderDfs, Quality: 1.0}}},
+		{"version=1", "application/vnd.ipld.car; version=1; dups=n", []trustlesshttp.ContentType{{Mime: trustlesshttp.MimeTypeCar, Duplicates: false, Order: trustlesshttp.ContentTypeOrderDfs, Quality: 1.0}}},
+		{"version=2", "application/vnd.ipld.car; version=2; dups=n", []trustlesshttp.ContentType{}},
+		{"order=dfs", "application/vnd.ipld.car; order=dfs; dups=n", []trustlesshttp.ContentType{{Mime: trustlesshttp.MimeTypeCar, Duplicates: false, Order: trustlesshttp.ContentTypeOrderDfs, Quality: 1.0}}},
+		{"order=unk", "application/vnd.ipld.car; order=unk; dups=n", []trustlesshttp.ContentType{{Mime: trustlesshttp.MimeTypeCar, Duplicates: false, Order: trustlesshttp.ContentTypeOrderUnk, Quality: 1.0}}},
+		{"order=bork", "application/vnd.ipld.car; order=bork; dups=y", []trustlesshttp.ContentType{}},
+		{"complete", "application/vnd.ipld.car; order=dfs; dups=y; version=1", []trustlesshttp.ContentType{{Mime: trustlesshttp.MimeTypeCar, Duplicates: true, Order: trustlesshttp.ContentTypeOrderDfs, Quality: 1.0}}},
+		{"complete (squish)", "application/vnd.ipld.car;order=dfs;dups=y;version=1", []trustlesshttp.ContentType{{Mime: trustlesshttp.MimeTypeCar, Duplicates: true, Order: trustlesshttp.ContentTypeOrderDfs, Quality: 1.0}}},
+		{"complete (shuffle)", "application/vnd.ipld.car;version=1;dups=y;order=dfs;", []trustlesshttp.ContentType{{Mime: trustlesshttp.MimeTypeCar, Duplicates: true, Order: trustlesshttp.ContentTypeOrderDfs, Quality: 1.0}}},
+		{"complete (cruft)", "application/vnd.ipld.car;;version=1; bip ;   dups=n ;bop;order=dfs;--", []trustlesshttp.ContentType{{Mime: trustlesshttp.MimeTypeCar, Duplicates: false, Order: trustlesshttp.ContentTypeOrderDfs, Quality: 1.0}}},
+		{"q", "application/vnd.ipld.car; order=dfs; q=0.77; dups=n", []trustlesshttp.ContentType{{Mime: trustlesshttp.MimeTypeCar, Duplicates: false, Order: trustlesshttp.ContentTypeOrderDfs, Quality: 0.77}}},
+		{"q=bork", "application/vnd.ipld.car; order=dfs; q=bork; dups=n", []trustlesshttp.ContentType{}},
+		{"q=-1", "application/vnd.ipld.car; order=dfs; q=-0.1; dups=n", []trustlesshttp.ContentType{}},
+
+		{
+			"ordered",
+			"application/vnd.ipld.car;dups=n;order=unk;q=0.8, text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.1, application/vnd.ipld.car;dups=y;order=dfs;q=0.9 , application/vnd.ipld.car, application/vnd.ipld.car;dups=y;order=unk;q=0.7, application/vnd.ipld.car;dups=y;order=dfs;q=0.7",
+			[]trustlesshttp.ContentType{
+				{Mime: trustlesshttp.MimeTypeCar, Duplicates: true, Order: trustlesshttp.ContentTypeOrderDfs, Quality: 1.0},
+				{Mime: trustlesshttp.MimeTypeCar, Duplicates: true, Order: trustlesshttp.ContentTypeOrderDfs, Quality: 0.9},
+				{Mime: trustlesshttp.MimeTypeCar, Duplicates: false, Order: trustlesshttp.ContentTypeOrderUnk, Quality: 0.8},
+				{Mime: trustlesshttp.MimeTypeCar, Duplicates: true, Order: trustlesshttp.ContentTypeOrderUnk, Quality: 0.7},
+				{Mime: trustlesshttp.MimeTypeCar, Duplicates: true, Order: trustlesshttp.ContentTypeOrderDfs, Quality: 0.7},
+				{Mime: "*/*", Duplicates: true, Order: trustlesshttp.ContentTypeOrderDfs, Quality: 0.1},
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			accepts := trustlesshttp.ParseAccept(tc.accept)
+			require.Equal(t, tc.expected, accepts)
 		})
 	}
 }
