@@ -54,6 +54,7 @@ type Config struct {
 	ExpectDuplicatesIn bool           // Handles whether the incoming stream has duplicates
 	WriteDuplicatesOut bool           // Handles whether duplicates should be written a second time as blocks
 	MaxBlocks          uint64         // set a budget for the traversal
+	OnBlockIn          func(uint64)   // a callback whenever a block is read the incoming source, recording the number of bytes in the block data
 }
 
 // TraversalResult provides the results of a successful traversal. Byte counting
@@ -150,7 +151,7 @@ func (cfg Config) VerifyBlockStream(
 	bs BlockStream,
 	lsys linking.LinkSystem,
 ) (TraversalResult, error) {
-	bt := &writeTracker{}
+	bt := &writeTracker{onBlockIn: cfg.OnBlockIn}
 	lsys.TrustedStorage = true // we can rely on the CAR decoder to check CID integrity
 	unixfsnode.AddUnixFSReificationToLinkSystem(&lsys)
 	lsys.StorageReadOpener = cfg.nextBlockReadOpener(ctx, bs, bt, lsys)
@@ -344,6 +345,8 @@ func readNextBlock(ctx context.Context, bs BlockStream, expected cid.Cid) ([]byt
 }
 
 type writeTracker struct {
+	onBlockIn func(uint64)
+
 	blocksIn  uint64
 	blocksOut uint64
 	bytesIn   uint64
@@ -352,7 +355,11 @@ type writeTracker struct {
 
 func (bt *writeTracker) recordBlockIn(data []byte) {
 	bt.blocksIn++
-	bt.bytesIn += uint64(len(data))
+	bc := uint64(len(data))
+	bt.bytesIn += bc
+	if bt.onBlockIn != nil {
+		bt.onBlockIn(bc)
+	}
 }
 
 func (bt *writeTracker) recordBlockOut(data []byte) {

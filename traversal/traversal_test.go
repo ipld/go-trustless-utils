@@ -787,7 +787,15 @@ func TestVerifyCar(t *testing.T) {
 			}
 
 			carStream, errorCh := makeCarStream(t, ctx, testCase.roots, testCase.blocks, testCase.carv2, testCase.expectErr != "", testCase.incomingHasDups, testCase.streamErr, testCase.carAsRawBlocks, testCase.carAsCIDv0)
-			result, err := testCase.cfg.VerifyCar(ctx, carStream, lsys)
+			cfg := testCase.cfg
+			var blockCount, byteCount uint64
+			if cfg.OnBlockIn == nil {
+				cfg.OnBlockIn = func(bytes uint64) {
+					blockCount++
+					byteCount += bytes
+				}
+			}
+			result, err := cfg.VerifyCar(ctx, carStream, lsys)
 
 			// read the rest of data
 			io.ReadAll(carStream)
@@ -805,6 +813,7 @@ func TestVerifyCar(t *testing.T) {
 				} else {
 					req.Equal(count(testCase.blocks), result.BlocksIn)
 				}
+				req.Equal(result.BlocksIn, blockCount)
 				if testCase.expectBlocksOut > 0 {
 					req.Equal(testCase.expectBlocksOut, result.BlocksOut)
 				} else {
@@ -815,6 +824,7 @@ func TestVerifyCar(t *testing.T) {
 				} else {
 					req.Equal(sizeOf(testCase.blocks), result.BytesIn)
 				}
+				req.Equal(result.BytesIn, byteCount)
 				if testCase.expectBytesOut > 0 {
 					req.Equal(testCase.expectBytesOut, result.BytesOut)
 				} else {
