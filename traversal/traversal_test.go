@@ -961,12 +961,12 @@ func makeCarStream(
 
 func TestCheckPath(t *testing.T) {
 	require.NoError(t, traversal.CheckPath(datamodel.ParsePath(""), datamodel.ParsePath("")))
-	require.ErrorContains(t, traversal.CheckPath(datamodel.ParsePath("a"), datamodel.ParsePath("")), "failed to traverse full path, missed: [a]")
+	require.ErrorContains(t, traversal.CheckPath(datamodel.ParsePath("a"), datamodel.ParsePath("")), "failed to traverse full path [a], missed: [a]")
 	require.NoError(t, traversal.CheckPath(datamodel.ParsePath(""), datamodel.ParsePath("a")))
 	require.NoError(t, traversal.CheckPath(datamodel.ParsePath("a/b/c"), datamodel.ParsePath("a/b/c")))
-	require.ErrorContains(t, traversal.CheckPath(datamodel.ParsePath("a/b/c/d"), datamodel.ParsePath("a/b/c")), "failed to traverse full path, missed: [d]")
+	require.ErrorContains(t, traversal.CheckPath(datamodel.ParsePath("a/b/c/d"), datamodel.ParsePath("a/b/c")), "failed to traverse full path [a/b/c/d], missed: [d]")
 	require.NoError(t, traversal.CheckPath(datamodel.ParsePath("a/b/c"), datamodel.ParsePath("a/b/c/d")))
-	require.ErrorContains(t, traversal.CheckPath(datamodel.ParsePath("a/b/c"), datamodel.ParsePath("wot/?")), "unexpected path segment visit, got [wot], expected [a]")
+	require.ErrorContains(t, traversal.CheckPath(datamodel.ParsePath("a/b/c"), datamodel.ParsePath("wot/?")), "unexpected segment visit in path [a/b/c], got [wot], expected [a]")
 }
 
 type expectedBlock struct {

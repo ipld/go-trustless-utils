@@ -77,15 +77,16 @@ type TraversalResult struct {
 // expectedPath does not match the prefix of the lastPath, or lastPath is
 // shorter than expectedPath, an error will be returned.
 func CheckPath(expectPath datamodel.Path, lastPath datamodel.Path) error {
-	for expectPath.Len() > 0 {
+	p := expectPath
+	for p.Len() > 0 {
 		if lastPath.Len() == 0 {
-			return fmt.Errorf("failed to traverse full path, missed: [%s]", expectPath.String())
+			return fmt.Errorf("failed to traverse full path [%s], missed: [%s]", expectPath.String(), p.String())
 		}
 		var seg, lastSeg datamodel.PathSegment
-		seg, expectPath = expectPath.Shift()
+		seg, p = p.Shift()
 		lastSeg, lastPath = lastPath.Shift()
 		if seg != lastSeg {
-			return fmt.Errorf("unexpected path segment visit, got [%s], expected [%s]", lastSeg.String(), seg.String())
+			return fmt.Errorf("unexpected segment visit in path [%s], got [%s], expected [%s]", expectPath.String(), lastSeg.String(), seg.String())
 		}
 	}
 	// having lastPath.Len()>0 is fine, it may be due to an "all" or
