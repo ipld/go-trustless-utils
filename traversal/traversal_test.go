@@ -12,6 +12,7 @@ import (
 	"time"
 
 	trustlessutils "github.com/ipld/go-trustless-utils"
+	trustlesstestutil "github.com/ipld/go-trustless-utils/testutil"
 	"github.com/ipld/go-trustless-utils/traversal"
 	"github.com/ipld/go-trustless-utils/traversal/internal/testutil"
 
@@ -32,9 +33,9 @@ import (
 	"github.com/ipld/go-ipld-prime/traversal/selector"
 	"github.com/ipld/go-ipld-prime/traversal/selector/builder"
 	selectorparse "github.com/ipld/go-ipld-prime/traversal/selector/parse"
-	gstestutil "github.com/ipld/go-trustless-utils/testutil"
 	trustlesspathing "github.com/ipld/ipld/specs/pkg-go/trustless-pathing"
 	mh "github.com/multiformats/go-multihash"
+	multihash "github.com/multiformats/go-multihash/core"
 	"github.com/stretchr/testify/require"
 )
 
@@ -140,7 +141,7 @@ func TestVerifyCar(t *testing.T) {
 	t.Logf("random seed: %d", rndSeed)
 	var rndReader io.Reader = rand.New(rand.NewSource(rndSeed))
 
-	store := &testutil.CorrectedMemStore{ParentStore: &memstore.Store{
+	store := &trustlesstestutil.CorrectedMemStore{ParentStore: &memstore.Store{
 		Bag: make(map[string][]byte),
 	}}
 	lsys := cidlink.DefaultLinkSystem()
@@ -148,7 +149,7 @@ func TestVerifyCar(t *testing.T) {
 	lsys.SetReadStorage(store)
 	lsys.SetWriteStorage(store)
 
-	tbc1 := gstestutil.SetupBlockChain(ctx, t, lsys, 1000, 100)
+	tbc1 := trustlesstestutil.SetupBlockChain(ctx, t, lsys, 1000, 100)
 	root1 := tbc1.TipLink.(cidlink.Link).Cid
 	allBlocks := tbc1.AllBlocks()
 	extraneousLnk, err := lsys.Store(linking.LinkContext{}, cidlink.LinkPrototype{Prefix: cid.Prefix{Version: 1, Codec: 0x71, MhType: 0x12, MhLength: 32}}, basicnode.NewString("borp"))
@@ -178,7 +179,7 @@ func TestVerifyCar(t *testing.T) {
 	ss = ssb.ExploreInterpretAs("unixfs", ssb.MatcherSubset(1<<20, 2<<20))
 	unixfsFileRange1048576_2097152Selector := ss.Node()
 
-	unixfsFileWithDups := unixfs.GenerateFile(t, &lsys, testutil.ZeroReader{}, 4<<20)
+	unixfsFileWithDups := unixfs.GenerateFile(t, &lsys, trustlesstestutil.ZeroReader{}, 4<<20)
 	unixfsFileWithDupsBlocks := testutil.ToBlocks(t, lsys, unixfsFileWithDups.Root, allSelector)
 	var unixfsDir unixfs.DirEntry
 	var unixfsDirBlocks []blocks.Block
@@ -238,6 +239,10 @@ func TestVerifyCar(t *testing.T) {
 	unixfsExclusiveWrappedShardedDirOnlyBlocks := testutil.ToBlocks(t, lsys, unixfsExclusiveWrappedShardedDir.Root, unixfsWrappedPreloadPathSelector)
 
 	mismatchedCidBlk, _ := blocks.NewBlockWithCid(extraneousByts, allBlocks[99].Cid())
+
+	identityDag := trustlesstestutil.MakeDagWithIdentity(t, lsys)
+	identityBlocks := testutil.ToBlocks(t, lsys, identityDag.Root, allSelector)
+
 	testCases := []struct {
 		name               string
 		skip               bool
@@ -741,6 +746,15 @@ func TestVerifyCar(t *testing.T) {
 			checkPathWith:      datamodel.ParsePath(wrapPathPlusMore),
 			expectCheckPathErr: "failed to traverse full path",
 		},
+		{
+			name:   "identity dag",
+			blocks: consumedBlocks(identityBlocks),
+			roots:  []cid.Cid{identityDag.Root},
+			cfg: traversal.Config{
+				Root:     identityDag.Root,
+				Selector: allSelector,
+			},
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -756,7 +770,7 @@ func TestVerifyCar(t *testing.T) {
 
 			req := require.New(t)
 
-			store := &testutil.CorrectedMemStore{ParentStore: &memstore.Store{
+			store := &trustlesstestutil.CorrectedMemStore{ParentStore: &memstore.Store{
 				Bag: make(map[string][]byte),
 			}}
 			lsys := cidlink.DefaultLinkSystem()
@@ -768,13 +782,19 @@ func TestVerifyCar(t *testing.T) {
 			lsys.StorageWriteOpener = func(lc linking.LinkContext) (io.Writer, linking.BlockWriteCommitter, error) {
 				var buf bytes.Buffer
 				return &buf, func(l datamodel.Link) error {
+					c := l.(cidlink.Link).Cid
+					if c.Prefix().MhType == multihash.IDENTITY {
+						// identity links are not written to the store
+						return nil
+					}
+
 					if testCase.blockWriteErr != nil && writeCounter+skipped == len(testCase.blocks)/2 {
 						return testCase.blockWriteErr
 					}
 					for testCase.blocks[writeCounter+skipped].skipped {
 						skipped++
 					}
-					req.Equal(testCase.blocks[writeCounter+skipped].Cid().String(), l.(cidlink.Link).Cid.String(), "block %d", writeCounter)
+					req.Equal(testCase.blocks[writeCounter+skipped].Cid().String(), c.String(), "block %d", writeCounter)
 					req.Equal(testCase.blocks[writeCounter+skipped].RawData(), buf.Bytes(), "block %d", writeCounter)
 					writeCounter++
 					w, wc, err := bwo(lc)

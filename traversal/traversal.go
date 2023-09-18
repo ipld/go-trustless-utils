@@ -15,6 +15,7 @@ import (
 	_ "github.com/ipld/go-ipld-prime/codec/dagjson"
 	_ "github.com/ipld/go-ipld-prime/codec/json"
 	_ "github.com/ipld/go-ipld-prime/codec/raw"
+	"github.com/multiformats/go-multihash"
 
 	blocks "github.com/ipfs/go-block-format"
 	"github.com/ipfs/go-cid"
@@ -256,6 +257,16 @@ func loadNode(ctx context.Context, rootCid cid.Cid, lsys linking.LinkSystem) (da
 	return rootNode, nil
 }
 
+func asIdentity(c cid.Cid) (digest []byte, ok bool, err error) {
+	dmh, err := multihash.Decode(c.Hash())
+	if err != nil {
+		return nil, false, err
+	}
+	ok = dmh.Code == multihash.IDENTITY
+	digest = dmh.Digest
+	return digest, ok, nil
+}
+
 // nextBlockReadOpener is a linking.BlockReadOpener that, for each call, will
 // read the next block from the provided BlockStream, verify it matches the
 // expected CID, and write it to the provided LinkSystem. It will then return
@@ -275,6 +286,13 @@ func (cfg *Config) nextBlockReadOpener(
 	seen := make(map[cid.Cid]struct{})
 	return func(lc linking.LinkContext, l datamodel.Link) (io.Reader, error) {
 		cid := l.(cidlink.Link).Cid
+
+		if digest, ok, err := asIdentity(cid); ok {
+			return io.NopCloser(bytes.NewReader(digest)), nil
+		} else if err != nil {
+			return nil, err
+		}
+
 		var data []byte
 		var err error
 		if _, ok := seen[cid]; ok {
