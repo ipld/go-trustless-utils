@@ -15,6 +15,7 @@ import (
 	"github.com/ipld/go-ipld-prime/node/basicnode"
 	"github.com/ipld/go-ipld-prime/traversal"
 	"github.com/ipld/go-ipld-prime/traversal/selector"
+	trustlesstestutil "github.com/ipld/go-trustless-utils/testutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -26,6 +27,12 @@ func ToBlocks(t *testing.T, lsys linking.LinkSystem, root cid.Cid, selNode datam
 	unixfsnode.AddUnixFSReificationToLinkSystem(&lsys)
 	osro := lsys.StorageReadOpener
 	lsys.StorageReadOpener = func(lc linking.LinkContext, l datamodel.Link) (io.Reader, error) {
+		if digest, ok, err := trustlesstestutil.AsIdentity(l.(cidlink.Link).Cid.KeyString()); ok {
+			return bytes.NewReader(digest), err
+		} else if err != nil {
+			return nil, err
+		}
+
 		r, err := osro(lc, l)
 		if err != nil {
 			return nil, err
