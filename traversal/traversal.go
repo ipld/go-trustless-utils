@@ -48,14 +48,16 @@ type BlockStream interface {
 var protoChooser = dagpb.AddSupportToChooser(basicnode.Chooser)
 
 type Config struct {
-	Root               cid.Cid        // The single root we expect to appear in the CAR and that we use to run our traversal against
-	AllowCARv2         bool           // If true, allow CARv2 files to be received, otherwise strictly only allow CARv1
-	Selector           datamodel.Node // The selector to execute, starting at the provided Root, to verify the contents of the CAR
-	CheckRootsMismatch bool           // Check if roots match expected behavior
-	ExpectDuplicatesIn bool           // Handles whether the incoming stream has duplicates
-	WriteDuplicatesOut bool           // Handles whether duplicates should be written a second time as blocks
-	MaxBlocks          uint64         // set a budget for the traversal
-	OnBlockIn          func(uint64)   // a callback whenever a block is read the incoming source, recording the number of bytes in the block data
+	Root                 cid.Cid        // The single root we expect to appear in the CAR and that we use to run our traversal against
+	AllowCARv2           bool           // If true, allow CARv2 files to be received, otherwise strictly only allow CARv1
+	Selector             datamodel.Node // The selector to execute, starting at the provided Root, to verify the contents of the CAR
+	CheckRootsMismatch   bool           // Check if roots match expected behavior
+	ExpectDuplicatesIn   bool           // Handles whether the incoming stream has duplicates
+	WriteDuplicatesOut   bool           // Handles whether duplicates should be written a second time as blocks
+	MaxBlocks            uint64         // set a budget for the traversal
+	OnBlockIn            func(uint64)   // a callback whenever a block is read the incoming source, recording the number of bytes in the block data
+	UnsafeSkipUnexpected bool           // instruct the traverser not to error on block mismatch, but rather to simply keep reading more blocks
+	// NOTE: do not use this unless you trust the CAR source
 }
 
 // TraversalResult provides the results of a successful traversal. Byte counting
@@ -300,7 +302,7 @@ func (cfg *Config) nextBlockReadOpener(
 		if _, ok := seen[cid]; ok {
 			if cfg.ExpectDuplicatesIn {
 				// duplicate block, but in this case we are expecting the stream to have it
-				data, err = readNextBlock(ctx, bs, cid)
+				data, err = readNextBlock(ctx, bs, cid, cfg.UnsafeSkipUnexpected)
 				if err != nil {
 					return nil, err
 				}
@@ -321,7 +323,7 @@ func (cfg *Config) nextBlockReadOpener(
 			}
 		} else {
 			seen[cid] = struct{}{}
-			data, err = readNextBlock(ctx, bs, cid)
+			data, err = readNextBlock(ctx, bs, cid, cfg.UnsafeSkipUnexpected)
 			if err != nil {
 				return nil, err
 			}
@@ -346,7 +348,16 @@ func (cfg *Config) nextBlockReadOpener(
 	}
 }
 
-func readNextBlock(ctx context.Context, bs BlockStream, expected cid.Cid) ([]byte, error) {
+func readNextBlock(ctx context.Context, bs BlockStream, expected cid.Cid, skipUnexpected bool) ([]byte, error) {
+	for {
+		blk, err := nextBlock(ctx, bs, expected)
+		if !skipUnexpected || !errors.Is(err, ErrUnexpectedBlock) {
+			return blk, err
+		}
+	}
+}
+
+func nextBlock(ctx context.Context, bs BlockStream, expected cid.Cid) ([]byte, error) {
 	blk, err := bs.Next(ctx)
 	if err != nil {
 		if errors.Is(err, io.EOF) {

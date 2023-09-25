@@ -346,6 +346,16 @@ func TestVerifyCar(t *testing.T) {
 			},
 		},
 		{
+			name:   "carv1 with extraneous leading block and UnsafeSkipMismatch succeeds",
+			blocks: append(skippedBlocks([]blocks.Block{extraneousBlk}), consumedBlocks(allBlocks)...),
+			roots:  []cid.Cid{root1},
+			cfg: traversal.Config{
+				Root:                 root1,
+				Selector:             allSelector,
+				UnsafeSkipUnexpected: true,
+			},
+		},
+		{
 			name:      "carv1 with out-of-order blocks errors",
 			blocks:    consumedBlocks(append(append([]blocks.Block{}, allBlocks[50:]...), allBlocks[0:50]...)),
 			roots:     []cid.Cid{root1},
@@ -365,6 +375,7 @@ func TestVerifyCar(t *testing.T) {
 				Selector: allSelector,
 			},
 		},
+
 		{
 			name:   "carv1 over budget errors",
 			blocks: consumedBlocks(allBlocks),
