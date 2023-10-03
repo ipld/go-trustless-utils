@@ -42,10 +42,10 @@ func (cms *CorrectedMemStore) Get(ctx context.Context, key string) ([]byte, erro
 	} else if err != nil {
 		return nil, err
 	}
-
 	data, err := cms.ParentStore.Get(ctx, key)
 	if err != nil && err.Error() == "404" {
-		err = format.ErrNotFound{}
+		cid, _ := cid.Cast([]byte(key))
+		err = format.ErrNotFound{Cid: cid}
 	}
 	return data, err
 }
@@ -58,7 +58,8 @@ func (cms *CorrectedMemStore) GetStream(ctx context.Context, key string) (io.Rea
 	}
 	rc, err := cms.ParentStore.GetStream(ctx, key)
 	if err != nil && err.Error() == "404" {
-		err = format.ErrNotFound{}
+		cid, _ := cid.Cast([]byte(key))
+		err = format.ErrNotFound{Cid: cid}
 	}
 	return rc, err
 }
