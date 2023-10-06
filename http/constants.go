@@ -8,9 +8,11 @@ import (
 type ContentTypeOrder string
 
 const (
-	MimeTypeCar                = "application/vnd.ipld.car"            // The only accepted MIME type
-	MimeTypeCarVersion         = "1"                                   // We only accept version 1 of the MIME type
-	FormatParameterCar         = "car"                                 // The only valid format parameter value
+	MimeTypeCar                = "application/vnd.ipld.car"            // One of two acceptable MIME types
+	MimeTypeRaw                = "application/vnd.ipld.raw"            // One of two acceptable MIME types
+	MimeTypeCarVersion         = "1"                                   // We only accept version 1 of the CAR MIME type
+	FormatParameterCar         = "car"                                 // One of two acceptable format parameter values
+	FormatParameterRaw         = "raw"                                 // One of two acceptable format parameter values
 	FilenameExtCar             = ".car"                                // The only valid filename extension
 	ResponseCacheControlHeader = "public, max-age=29030400, immutable" // Magic cache control values
 	DefaultIncludeDupes        = true                                  // The default value for an unspecified "dups" parameter.
@@ -37,14 +39,16 @@ type ContentType struct {
 func (ct ContentType) String() string {
 	sb := strings.Builder{}
 	sb.WriteString(ct.MimeType)
-	sb.WriteString(";version=")
-	sb.WriteString(MimeTypeCarVersion)
-	sb.WriteString(";order=")
-	sb.WriteString(string(ct.Order))
-	if ct.Duplicates {
-		sb.WriteString(";dups=y")
-	} else {
-		sb.WriteString(";dups=n")
+	if ct.MimeType == MimeTypeCar {
+		sb.WriteString(";version=")
+		sb.WriteString(MimeTypeCarVersion)
+		sb.WriteString(";order=")
+		sb.WriteString(string(ct.Order))
+		if ct.Duplicates {
+			sb.WriteString(";dups=y")
+		} else {
+			sb.WriteString(";dups=n")
+		}
 	}
 	if ct.Quality < 1 && ct.Quality >= 0.00 {
 		sb.WriteString(";q=")
@@ -52,6 +56,14 @@ func (ct ContentType) String() string {
 		sb.WriteString(strconv.FormatFloat(float64(ct.Quality), 'g', 3, 32))
 	}
 	return sb.String()
+}
+
+func (ct ContentType) IsRaw() bool {
+	return ct.MimeType == MimeTypeRaw
+}
+
+func (ct ContentType) IsCar() bool {
+	return ct.MimeType == MimeTypeCar || ct.MimeType == "application/*" || ct.MimeType == "*/*"
 }
 
 // WithOrder returns a new ContentType with the specified order.

@@ -60,47 +60,55 @@ func ParseFilename(req *http.Request) (string, error) {
 	return "", nil
 }
 
-// CheckFormat validates that the data being requested is of the type CAR.
+// CheckFormat validates that the data being requested is of a compatible
+// content type. If the request is valid, a slice of ContentType descriptors
+// is returned, in preference order. If the request is invalid, an error is
+// returned.
+//
 // We do this validation because the IPFS Path Gateway spec allows for
 // additional response formats that the IPFS Trustless Gateway spec does not
 // currently support, so we throw an error in the cases where the request is
 // requesting one the unsupported response formats. IPFS Trustless Gateway only
-// supports returning CAR data.
+// supports returning CAR, or raw block data.
 //
 // The spec outlines that the requesting format can be provided
 // via the Accept header or the format query parameter.
 //
-// IPFS Trustless Gateway only allows the application/vnd.ipld.car Accept header
+// IPFS Trustless Gateway only allows the application/vnd.ipld.car
+// and application/vnd.ipld.raw Accept headers
 // https://specs.ipfs.tech/http-gateways/path-gateway/#accept-request-header
 //
-// IPFS Trustless Gateway only allows the "car" format query parameter
+// IPFS Trustless Gateway only allows the "car" and "raw" format query
+// parameters
 // https://specs.ipfs.tech/http-gateways/path-gateway/#format-request-query-parameter
-func CheckFormat(req *http.Request) (ContentType, error) {
-	// check if format is "car"
+func CheckFormat(req *http.Request) ([]ContentType, error) {
 	format := req.URL.Query().Get("format")
-	var validFormat bool
-	if format != "" {
-		if format != FormatParameterCar {
-			return ContentType{}, fmt.Errorf("invalid format parameter; unsupported: %q", format)
-		}
-		validFormat = true
+	switch format { // initial check, but we also want to check Accept before we allow this
+	case "", FormatParameterCar, FormatParameterRaw:
+	default:
+		return nil, fmt.Errorf("invalid format parameter; unsupported: %q", format)
 	}
 
 	accept := req.Header.Get("Accept")
 	if accept != "" {
-		// check if Accept header includes application/vnd.ipld.car
+		// check if Accept header includes what we need
 		accepts := ParseAccept(accept)
 		if len(accepts) == 0 {
-			return ContentType{}, fmt.Errorf("invalid Accept header; unsupported: %q", accept)
+			return nil, fmt.Errorf("invalid Accept header; unsupported: %q", accept)
 		}
-		return accepts[0], nil // pick the top one we can support
+		return accepts, nil // pick the top one we can support
 	}
 
-	if validFormat {
-		return DefaultContentType(), nil // default is acceptable in this case (no accept but format=car)
+	if format != "" {
+		switch format {
+		case FormatParameterCar:
+			return []ContentType{DefaultContentType().WithMimeType(MimeTypeCar)}, nil
+		case FormatParameterRaw:
+			return []ContentType{DefaultContentType().WithMimeType(MimeTypeRaw)}, nil
+		}
 	}
 
-	return ContentType{}, fmt.Errorf("neither a valid Accept header nor format parameter were provided")
+	return nil, fmt.Errorf("neither a valid Accept header nor format parameter were provided")
 }
 
 // ParseAccept validates a request Accept header and returns whether or not
@@ -108,7 +116,7 @@ func CheckFormat(req *http.Request) (ContentType, error) {
 //
 // This will operate the same as ParseContentType except that it is less strict
 // with the format specifier, allowing for "application/*" and "*/*" as well as
-// the standard "application/vnd.ipld.car".
+// the standard "application/vnd.ipld.car" and "application/vnd.ipld.raw".
 func ParseAccept(acceptHeader string) []ContentType {
 	acceptTypes := strings.Split(acceptHeader, ",")
 	accepts := make([]ContentType, 0, len(acceptTypes))
@@ -130,8 +138,8 @@ func ParseAccept(acceptHeader string) []ContentType {
 // the header value was valid or not.
 //
 // This will operate similar to ParseAccept except that it strictly only
-// allows the "application/vnd.ipld.car" Content-Type (and it won't accept
-// comma separated list of content types).
+// allows the "application/vnd.ipld.car" and "application/vnd.ipld.raw"
+// Content-Types (and it won't accept comma separated list of content types).
 func ParseContentType(contentTypeHeader string) (ContentType, bool) {
 	return parseContentType(contentTypeHeader, true)
 }
@@ -139,7 +147,7 @@ func ParseContentType(contentTypeHeader string) (ContentType, bool) {
 func parseContentType(header string, strictType bool) (ContentType, bool) {
 	typeParts := strings.Split(header, ";")
 	mime := strings.TrimSpace(typeParts[0])
-	if mime == MimeTypeCar || (!strictType && (mime == "*/*" || mime == "application/*")) {
+	if mime == MimeTypeCar || mime == MimeTypeRaw || (!strictType && (mime == "*/*" || mime == "application/*")) {
 		contentType := DefaultContentType().WithMimeType(mime)
 		// parse additional car attributes outlined in IPIP-412
 		// https://specs.ipfs.tech/http-gateways/trustless-gateway/
@@ -148,42 +156,45 @@ func parseContentType(header string, strictType bool) (ContentType, bool) {
 			if len(pair) == 2 {
 				attr := strings.TrimSpace(pair[0])
 				value := strings.TrimSpace(pair[1])
-				switch attr {
-				case "dups":
-					switch value {
-					case "y":
-						contentType.Duplicates = true
-					case "n":
-						contentType.Duplicates = false
+				if mime == MimeTypeCar {
+					switch attr {
+					case "dups":
+						switch value {
+						case "y":
+							contentType.Duplicates = true
+						case "n":
+							contentType.Duplicates = false
+						default:
+							// don't accept unexpected values
+							return ContentType{}, false
+						}
+					case "version":
+						switch value {
+						case MimeTypeCarVersion:
+						default:
+							return ContentType{}, false
+						}
+					case "order":
+						switch value {
+						case "dfs":
+							contentType.Order = ContentTypeOrderDfs
+						case "unk":
+							contentType.Order = ContentTypeOrderUnk
+						default:
+							// we only do dfs, which also satisfies unk, future extensions are not yet supported
+							return ContentType{}, false
+						}
 					default:
-						// don't accept unexpected values
-						return ContentType{}, false
+						// ignore others
 					}
-				case "version":
-					switch value {
-					case MimeTypeCarVersion:
-					default:
-						return ContentType{}, false
-					}
-				case "order":
-					switch value {
-					case "dfs":
-						contentType.Order = ContentTypeOrderDfs
-					case "unk":
-						contentType.Order = ContentTypeOrderUnk
-					default:
-						// we only do dfs, which also satisfies unk, future extensions are not yet supported
-						return ContentType{}, false
-					}
-				case "q":
+				}
+				if attr == "q" {
 					// parse quality
 					quality, err := strconv.ParseFloat(value, 32)
 					if err != nil || quality < 0 || quality > 1 {
 						return ContentType{}, false
 					}
 					contentType.Quality = float32(quality)
-				default:
-					// ignore others
 				}
 			}
 		}
