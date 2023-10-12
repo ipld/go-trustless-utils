@@ -146,7 +146,9 @@ func (r Request) Selector() datamodel.Node {
 		var to int64 = math.MaxInt64
 		if r.Bytes.To != nil {
 			to = *r.Bytes.To
-			if to >= 0 {
+			if to == -1 {
+				to = math.MaxInt64
+			} else {
 				to++ // selector is exclusive, so increment the end
 			}
 		}
