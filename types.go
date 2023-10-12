@@ -22,9 +22,11 @@ var matcherSelector = builder.NewSelectorSpecBuilder(basicnode.Prototype.Any).Ma
 // Gateway protocol.
 type DagScope string
 
-const DagScopeAll DagScope = "all"
-const DagScopeEntity DagScope = "entity"
-const DagScopeBlock DagScope = "block"
+const (
+	DagScopeAll    DagScope = "all"
+	DagScopeEntity DagScope = "entity"
+	DagScopeBlock  DagScope = "block"
+)
 
 // ParseDagScope parses a string form of a DagScope into a DagScope.
 func ParseDagScope(s string) (DagScope, error) {
@@ -144,7 +146,7 @@ func (r Request) Selector() datamodel.Node {
 		var to int64 = math.MaxInt64
 		if r.Bytes.To != nil {
 			to = *r.Bytes.To
-			if to > 0 {
+			if to >= 0 {
 				to++ // selector is exclusive, so increment the end
 			}
 		}
