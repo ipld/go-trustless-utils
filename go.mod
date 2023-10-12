@@ -11,7 +11,7 @@ require (
 	github.com/ipld/go-car/v2 v2.13.1
 	github.com/ipld/go-codec-dagpb v1.6.0
 	github.com/ipld/go-ipld-prime v0.21.0
-	github.com/ipld/ipld/specs v0.0.0-20230907004443-0e4ff95ff474
+	github.com/ipld/ipld/specs v0.0.0-20231012031213-54d3b21deda4
 	github.com/jbenet/go-random v0.0.0-20190219211222-123a90aedc0c
 	github.com/multiformats/go-multihash v0.2.3
 	github.com/stretchr/testify v1.8.4
