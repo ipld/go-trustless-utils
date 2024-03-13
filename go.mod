@@ -2,7 +2,6 @@ module github.com/ipld/go-trustless-utils
 
 go 1.21
 
-
 require (
 	github.com/cespare/xxhash v1.1.0
 	github.com/ipfs/go-block-format v0.2.0
