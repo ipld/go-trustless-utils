@@ -5,7 +5,7 @@ go 1.22
 require (
 	github.com/cespare/xxhash v1.1.0
 	github.com/ipfs/go-block-format v0.2.0
-	github.com/ipfs/go-cid v0.4.1
+	github.com/ipfs/go-cid v0.5.0
 	github.com/ipfs/go-ipld-format v0.6.0
 	github.com/ipfs/go-unixfsnode v1.9.2
 	github.com/ipld/go-car/v2 v2.14.2
