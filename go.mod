@@ -1,6 +1,6 @@
 module github.com/ipld/go-trustless-utils
 
-go 1.23.10
+go 1.24
 
 require (
 	github.com/cespare/xxhash v1.1.0
