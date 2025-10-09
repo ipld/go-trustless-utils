@@ -81,31 +81,77 @@ func ParseFilename(req *http.Request) (string, error) {
 // IPFS Trustless Gateway only allows the "car" and "raw" format query
 // parameters
 // https://specs.ipfs.tech/http-gateways/path-gateway/#format-request-query-parameter
+//
+// Per the spec: "When both Accept HTTP header and format query parameter are
+// present, Accept SHOULD take precedence." However, wildcard Accept headers
+// (*/* and application/*) are treated as having no format preference, allowing
+// the format parameter to be used instead.
 func CheckFormat(req *http.Request) ([]ContentType, error) {
 	format := req.URL.Query().Get("format")
-	switch format { // initial check, but we also want to check Accept before we allow this
+	switch format {
 	case "", FormatParameterCar, FormatParameterRaw:
 	default:
 		return nil, fmt.Errorf("invalid format parameter; unsupported: %q", format)
 	}
 
 	accept := req.Header.Get("Accept")
+
+	// Parse Accept header if present
+	var accepts []ContentType
 	if accept != "" {
-		// check if Accept header includes what we need
-		accepts := ParseAccept(accept)
+		accepts = ParseAccept(accept)
 		if len(accepts) == 0 {
+			// Invalid Accept header - if we have a format parameter, use it
+			if format != "" {
+				switch format {
+				case FormatParameterCar:
+					return []ContentType{DefaultContentType().WithMimeType(MimeTypeCar)}, nil
+				case FormatParameterRaw:
+					return []ContentType{DefaultContentType().WithMimeType(MimeTypeRaw)}, nil
+				}
+			}
 			return nil, fmt.Errorf("invalid Accept header; unsupported: %q", accept)
 		}
-		return accepts, nil // pick the top one we can support
 	}
 
+	// Check if Accept is a wildcard (essentially no preference)
+	hasWildcardAccept := false
+	if len(accepts) > 0 {
+		// If the highest priority Accept is a wildcard, treat as no preference
+		if accepts[0].MimeType == "*/*" || accepts[0].MimeType == "application/*" {
+			hasWildcardAccept = true
+		}
+	}
+
+	// Spec says Accept should take precedence over format parameter
+	// However, wildcards are treated as no preference
+	if len(accepts) > 0 && !hasWildcardAccept {
+		// Specific Accept header takes precedence
+		return accepts, nil
+	}
+
+	// No specific Accept preference (either no Accept, invalid Accept with format, or wildcard)
+	// Use format parameter if present
 	if format != "" {
 		switch format {
 		case FormatParameterCar:
+			// If we have CAR accepts (even wildcards), try to inherit parameters
+			for _, a := range accepts {
+				if a.IsCar() {
+					return []ContentType{a.WithMimeType(MimeTypeCar)}, nil
+				}
+			}
 			return []ContentType{DefaultContentType().WithMimeType(MimeTypeCar)}, nil
 		case FormatParameterRaw:
 			return []ContentType{DefaultContentType().WithMimeType(MimeTypeRaw)}, nil
 		}
+	}
+
+	// Wildcard Accept with no format parameter - return the wildcard accepts
+	// This allows the caller to convert wildcards to a sensible default
+	// (typically CAR format)
+	if len(accepts) > 0 {
+		return accepts, nil
 	}
 
 	return nil, fmt.Errorf("neither a valid Accept header nor format parameter were provided")
