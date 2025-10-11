@@ -196,129 +196,129 @@ func TestEtag(t *testing.T) {
 		{
 			cid:      testCidV0,
 			scope:    trustlessutils.DagScopeAll,
-			expected: `"QmVXsSVjwxMsCwKRCUxEkGb4f4B98gXVy3ih3v4otvcURK.car.58mf8vcmd2eo8"`,
+			expected: `W/"QmVXsSVjwxMsCwKRCUxEkGb4f4B98gXVy3ih3v4otvcURK.car.8it8cu7ifb381"`,
 		},
 		{
 			cid:      testCidV0,
 			scope:    trustlessutils.DagScopeEntity,
-			expected: `"QmVXsSVjwxMsCwKRCUxEkGb4f4B98gXVy3ih3v4otvcURK.car.3t6g88g8u04i6"`,
+			expected: `W/"QmVXsSVjwxMsCwKRCUxEkGb4f4B98gXVy3ih3v4otvcURK.car.foi1g1a8rg6ti"`,
 		},
 		{
 			cid:      testCidV0,
 			scope:    trustlessutils.DagScopeBlock,
-			expected: `"QmVXsSVjwxMsCwKRCUxEkGb4f4B98gXVy3ih3v4otvcURK.car.1fe71ua3km0b5"`,
+			expected: `W/"QmVXsSVjwxMsCwKRCUxEkGb4f4B98gXVy3ih3v4otvcURK.car.a8f7a8rsrms9i"`,
 		},
 		{
 			cid:      testCidV0,
 			scope:    trustlessutils.DagScopeAll,
 			dups:     true,
-			expected: `"QmVXsSVjwxMsCwKRCUxEkGb4f4B98gXVy3ih3v4otvcURK.car.4mglp6etuagob"`,
+			expected: `W/"QmVXsSVjwxMsCwKRCUxEkGb4f4B98gXVy3ih3v4otvcURK.car.6m8kn4j19tni6"`,
 		},
 		{
 			cid:      testCidV0,
 			scope:    trustlessutils.DagScopeEntity,
 			dups:     true,
-			expected: `"QmVXsSVjwxMsCwKRCUxEkGb4f4B98gXVy3ih3v4otvcURK.car.fqhsp0g4l66m1"`,
+			expected: `W/"QmVXsSVjwxMsCwKRCUxEkGb4f4B98gXVy3ih3v4otvcURK.car.2j3kq27gtjhf"`,
 		},
 		{
 			cid:      testCidV0,
 			scope:    trustlessutils.DagScopeBlock,
 			dups:     true,
-			expected: `"QmVXsSVjwxMsCwKRCUxEkGb4f4B98gXVy3ih3v4otvcURK.car.8u1ga109k62pp"`,
+			expected: `W/"QmVXsSVjwxMsCwKRCUxEkGb4f4B98gXVy3ih3v4otvcURK.car.2ri95n4cje0rr"`,
 		},
 		{
 			cid:      testCidV1,
 			scope:    trustlessutils.DagScopeAll,
 			path:     "/some/path/to/thing",
-			expected: `"bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi.car.8q5lna3r43lgj"`,
+			expected: `W/"bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi.car.dsohuj12hih8i"`,
 		},
 		{
 			cid:      testCidV1,
 			scope:    trustlessutils.DagScopeEntity,
 			path:     "/some/path/to/thing",
-			expected: `"bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi.car.e4hni8qqgeove"`,
+			expected: `W/"bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi.car.aq30ilfrin04i"`,
 		},
 		{
 			cid:      testCidV1,
 			scope:    trustlessutils.DagScopeBlock,
 			path:     "/some/path/to/thing",
-			expected: `"bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi.car.7pdc786smhd1n"`,
+			expected: `W/"bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi.car.cs4m0tf4dl7ju"`,
 		},
 		{
 			cid:      testCidV1,
 			scope:    trustlessutils.DagScopeAll,
 			path:     "/some/path/to/thing",
 			dups:     true,
-			expected: `"bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi.car.bdfv1q76a1oem"`,
+			expected: `W/"bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi.car.dtit638f59s4p"`,
 		},
 		{
 			cid:      testCidV1,
 			scope:    trustlessutils.DagScopeEntity,
 			path:     "/some/path/to/thing",
 			dups:     true,
-			expected: `"bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi.car.790m13mh0recp"`,
+			expected: `W/"bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi.car.e8bn343seg1kp"`,
 		},
 		{
 			cid:      testCidV1,
 			scope:    trustlessutils.DagScopeBlock,
 			path:     "/some/path/to/thing",
 			dups:     true,
-			expected: `"bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi.car.972jmjvd3o3"`,
+			expected: `W/"bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi.car.1oe35hpqdh19"`,
 		},
 		// path variations should be normalised
 		{
 			cid:      testCidV1,
 			scope:    trustlessutils.DagScopeAll,
 			path:     "some/path/to/thing",
-			expected: `"bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi.car.8q5lna3r43lgj"`,
+			expected: `W/"bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi.car.dsohuj12hih8i"`,
 		},
 		{
 			cid:      testCidV1,
 			scope:    trustlessutils.DagScopeAll,
 			path:     "///some//path//to/thing/",
-			expected: `"bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi.car.8q5lna3r43lgj"`,
+			expected: `W/"bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi.car.dsohuj12hih8i"`,
 		},
 		{
 			cid:      cid.MustParse("bafyrgqhai26anf3i7pips7q22coa4sz2fr4gk4q4sqdtymvvjyginfzaqewveaeqdh524nsktaq43j65v22xxrybrtertmcfxufdam3da3hbk"),
 			scope:    trustlessutils.DagScopeAll,
-			expected: `"bafyrgqhai26anf3i7pips7q22coa4sz2fr4gk4q4sqdtymvvjyginfzaqewveaeqdh524nsktaq43j65v22xxrybrtertmcfxufdam3da3hbk.car.9lumqv26cg30t"`,
+			expected: `W/"bafyrgqhai26anf3i7pips7q22coa4sz2fr4gk4q4sqdtymvvjyginfzaqewveaeqdh524nsktaq43j65v22xxrybrtertmcfxufdam3da3hbk.car.dpv90ba8ck8dn"`,
 		},
 		{
 			cid:      cid.MustParse("QmVXsSVjwxMsCwKRCUxEkGb4f4B98gXVy3ih3v4otvcURK"),
 			scope:    trustlessutils.DagScopeAll,
 			bytes:    &trustlessutils.ByteRange{From: 0}, // default, not included
-			expected: `"QmVXsSVjwxMsCwKRCUxEkGb4f4B98gXVy3ih3v4otvcURK.car.58mf8vcmd2eo8"`,
+			expected: `W/"QmVXsSVjwxMsCwKRCUxEkGb4f4B98gXVy3ih3v4otvcURK.car.8it8cu7ifb381"`,
 		},
 		{
 			cid:      cid.MustParse("QmVXsSVjwxMsCwKRCUxEkGb4f4B98gXVy3ih3v4otvcURK"),
 			scope:    trustlessutils.DagScopeAll,
 			bytes:    &trustlessutils.ByteRange{From: 10},
-			expected: `"QmVXsSVjwxMsCwKRCUxEkGb4f4B98gXVy3ih3v4otvcURK.car.560ditjelh0u2"`,
+			expected: `W/"QmVXsSVjwxMsCwKRCUxEkGb4f4B98gXVy3ih3v4otvcURK.car.e5uv1fivtc00q"`,
 		},
 		{
 			cid:      cid.MustParse("QmVXsSVjwxMsCwKRCUxEkGb4f4B98gXVy3ih3v4otvcURK"),
 			scope:    trustlessutils.DagScopeAll,
 			bytes:    &trustlessutils.ByteRange{From: 0, To: ptr(200)},
-			expected: `"QmVXsSVjwxMsCwKRCUxEkGb4f4B98gXVy3ih3v4otvcURK.car.faqf14andvfmb"`,
+			expected: `W/"QmVXsSVjwxMsCwKRCUxEkGb4f4B98gXVy3ih3v4otvcURK.car.d85s2ubukqum"`,
 		},
 		{
 			cid:      cid.MustParse("QmVXsSVjwxMsCwKRCUxEkGb4f4B98gXVy3ih3v4otvcURK"),
 			scope:    trustlessutils.DagScopeAll,
 			bytes:    &trustlessutils.ByteRange{From: 100, To: ptr(200)},
-			expected: `"QmVXsSVjwxMsCwKRCUxEkGb4f4B98gXVy3ih3v4otvcURK.car.bvebrb14stt94"`,
+			expected: `W/"QmVXsSVjwxMsCwKRCUxEkGb4f4B98gXVy3ih3v4otvcURK.car.5rhbacaeam153"`,
 		},
 		{
 			cid:      cid.MustParse("QmVXsSVjwxMsCwKRCUxEkGb4f4B98gXVy3ih3v4otvcURK"),
 			scope:    trustlessutils.DagScopeEntity,
 			bytes:    &trustlessutils.ByteRange{From: 100, To: ptr(200)},
-			expected: `"QmVXsSVjwxMsCwKRCUxEkGb4f4B98gXVy3ih3v4otvcURK.car.bq3u6t9t877t3"`,
+			expected: `W/"QmVXsSVjwxMsCwKRCUxEkGb4f4B98gXVy3ih3v4otvcURK.car.qlvlk4h7odk6"`,
 		},
 		{
 			cid:      cid.MustParse("QmVXsSVjwxMsCwKRCUxEkGb4f4B98gXVy3ih3v4otvcURK"),
 			scope:    trustlessutils.DagScopeEntity,
 			dups:     true,
 			bytes:    &trustlessutils.ByteRange{From: 100, To: ptr(200)},
-			expected: `"QmVXsSVjwxMsCwKRCUxEkGb4f4B98gXVy3ih3v4otvcURK.car.fhf498an52uqb"`,
+			expected: `W/"QmVXsSVjwxMsCwKRCUxEkGb4f4B98gXVy3ih3v4otvcURK.car.272msbj2cl4lj"`,
 		},
 	}
 
@@ -335,7 +335,7 @@ func TestEtag(t *testing.T) {
 				Bytes:      tc.bytes,
 				Duplicates: tc.dups,
 			}
-			actual := rr.Etag()
+			actual := rr.Etag("dfs") // Default order
 			if actual != tc.expected {
 				t.Errorf("expected %s, got %s", tc.expected, actual)
 			}
@@ -430,6 +430,54 @@ func TestUrlPath(t *testing.T) {
 			actual, err := tc.request.UrlPath()
 			require.NoError(t, err)
 			require.Equal(t, tc.expectedUrlPath, actual)
+		})
+	}
+}
+
+func TestIpfsRoots(t *testing.T) {
+	testCases := []struct {
+		name     string
+		request  trustlessutils.Request
+		expected string
+	}{
+		{
+			name: "simple CID request",
+			request: trustlessutils.Request{
+				Root: testCidV1,
+			},
+			expected: testCidV1.String(),
+		},
+		{
+			name: "simple CID request with scope",
+			request: trustlessutils.Request{
+				Root:  testCidV0,
+				Scope: trustlessutils.DagScopeEntity,
+			},
+			expected: testCidV0.String(),
+		},
+		{
+			name: "CID with path - empty (streaming gateway)",
+			request: trustlessutils.Request{
+				Root: testCidV1,
+				Path: "/some/path/to/thing",
+			},
+			expected: "",
+		},
+		{
+			name: "CID with path and scope - empty (streaming gateway)",
+			request: trustlessutils.Request{
+				Root:  testCidV1,
+				Path:  "some/path",
+				Scope: trustlessutils.DagScopeEntity,
+			},
+			expected: "",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := tc.request.IpfsRoots()
+			require.Equal(t, tc.expected, actual)
 		})
 	}
 }

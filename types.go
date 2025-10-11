@@ -203,34 +203,70 @@ func PathEscape(path string) string {
 	return sb.String()
 }
 
-// Etag produces a string suitable for use as an Etag in an HTTP response for
-// this Request.
-func (r Request) Etag() string {
-	// similar, but extended form of:
-	// https://github.com/ipfs/boxo/blob/a91e44dbdbd4c36a5b25a1b9df6ee237aa4442d2/gateway/handler_car.go#L167-L184
-	sb := strings.Builder{}
-	sb.WriteString("/ipfs/")
-	sb.WriteString(r.Root.String())
+// Etag produces a weak Etag suitable for use as an Etag HTTP response header.
+// The order parameter should match the CAR order parameter from the ContentType.
+//
+// A weak Etag is used because:
+//   - Different implementations may include different parameters in the hash
+//   - Streaming gateways cannot include resolved path segments (only root+path)
+//   - For non-static backends (such as Filecoin storage providers), DAG
+//     availability may change over time as new deals are added
+func (r Request) Etag(order string) string {
+	h := xxhash.New()
+
+	// Path (unresolved - differs from Boxo's resolved immutable path)
+	h.Write([]byte("/ipfs/"))
+	h.Write([]byte(r.Root.String()))
 	if r.Path != "" {
-		sb.WriteRune('/')
-		sb.WriteString(datamodel.ParsePath(r.Path).String())
+		h.Write([]byte("/"))
+		h.Write([]byte(datamodel.ParsePath(r.Path).String()))
 	}
+
+	// Scope: only include if not default (all)
 	if r.Scope != DagScopeAll {
-		sb.WriteRune('.')
-		sb.WriteString(string(r.Scope))
+		h.Write([]byte("\x00scope="))
+		h.Write([]byte(string(r.Scope)))
 	}
+
+	// Byte range: only include if not default
 	if !r.Bytes.IsDefault() {
-		sb.WriteRune('.')
-		sb.WriteString(strconv.FormatInt(r.Bytes.From, 10))
+		h.Write([]byte("\x00range="))
+		h.Write([]byte(strconv.FormatInt(r.Bytes.From, 10)))
 		if r.Bytes.To != nil {
-			sb.WriteRune('.')
-			sb.WriteString(strconv.FormatInt(*r.Bytes.To, 10))
+			h.Write([]byte(","))
+			h.Write([]byte(strconv.FormatInt(*r.Bytes.To, 10)))
 		}
 	}
-	if r.Duplicates {
-		sb.WriteString(".dups")
+
+	// Order: only include if not default (dfs)
+	if order != "" && order != "dfs" {
+		h.Write([]byte("\x00order="))
+		h.Write([]byte(order))
 	}
-	sb.WriteString(".dfs")
-	suffix := strconv.FormatUint(xxhash.Sum64([]byte(sb.String())), 32)
-	return `"` + r.Root.String() + ".car." + suffix + `"`
+
+	// Duplicates: only include if explicitly true (y)
+	if r.Duplicates {
+		h.Write([]byte("\x00dups=y"))
+	}
+
+	suffix := strconv.FormatUint(h.Sum64(), 32)
+	return `W/"` + r.Root.String() + ".car." + suffix + `"`
+}
+
+// IpfsRoots returns the CID or CIDs that should be included in the X-Ipfs-Roots
+// response header. For streaming-first gateways that don't pre-resolve paths,
+// this returns just the root CID for simple requests (no path), and an empty
+// string for path requests since intermediate CIDs are not known ahead of time.
+//
+// Implementations that are able to resolve the full path ahead of time may
+// return a comma-separated list of all CIDs in the path and not use this
+// method.
+func (r Request) IpfsRoots() string {
+	// For requests with paths, streaming gateways cannot provide intermediate CIDs
+	// since headers are sent before path traversal completes
+	if r.Path != "" {
+		return ""
+	}
+	// For simple CID requests, return just the root
+	return r.Root.String()
 }
