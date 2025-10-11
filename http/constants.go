@@ -1,6 +1,7 @@
 package trustlesshttp
 
 import (
+	"net/url"
 	"strconv"
 	"strings"
 )
@@ -13,7 +14,8 @@ const (
 	MimeTypeCarVersion         = "1"                                   // We only accept version 1 of the CAR MIME type
 	FormatParameterCar         = "car"                                 // One of two acceptable format parameter values
 	FormatParameterRaw         = "raw"                                 // One of two acceptable format parameter values
-	FilenameExtCar             = ".car"                                // The only valid filename extension
+	FilenameExtCar             = ".car"                                // Valid filename extension for CAR responses
+	FilenameExtRaw             = ".bin"                                // Valid filename extension for raw block responses
 	ResponseCacheControlHeader = "public, max-age=29030400, immutable" // Magic cache control values
 	DefaultIncludeDupes        = true                                  // The default value for an unspecified "dups" parameter.
 	DefaultOrder               = ContentTypeOrderDfs                   // The default value for an unspecified "order" parameter.
@@ -88,6 +90,41 @@ func (ct ContentType) WithMimeType(mime string) ContentType {
 func (ct ContentType) WithQuality(quality float32) ContentType {
 	ct.Quality = quality
 	return ct
+}
+
+// ContentLocation returns the Content-Location header value for this ContentType
+// if format negotiation occurred via Accept header but the URL lacks a format parameter.
+// Returns empty string if format parameter is already present or if Content-Location
+// should not be set.
+//
+// This helps HTTP caches store different formats separately.
+func (ct ContentType) ContentLocation(requestURL string) string {
+	// Parse the URL to check for format parameter
+	u, err := url.Parse(requestURL)
+	if err != nil {
+		return ""
+	}
+
+	// If format parameter already present, don't set Content-Location
+	if u.Query().Get("format") != "" {
+		return ""
+	}
+
+	// Determine format parameter value
+	formatParam := FormatParameterCar
+	if ct.IsRaw() {
+		formatParam = FormatParameterRaw
+	}
+
+	// Build Content-Location URL with format parameter
+	contentLocation := u.Path
+	if u.RawQuery != "" {
+		contentLocation += "?" + u.RawQuery + "&format=" + formatParam
+	} else {
+		contentLocation += "?format=" + formatParam
+	}
+
+	return contentLocation
 }
 
 func DefaultContentType() ContentType {
