@@ -77,22 +77,32 @@ func ptr[T any](v T) *T {
 }
 
 func TestParseFilename(t *testing.T) {
+	carAccepts := []trustlesshttp.ContentType{trustlesshttp.DefaultContentType()}
+	rawAccepts := []trustlesshttp.ContentType{trustlesshttp.DefaultContentType().WithMimeType(trustlesshttp.MimeTypeRaw)}
+	bothAccepts := []trustlesshttp.ContentType{trustlesshttp.DefaultContentType(), trustlesshttp.DefaultContentType().WithMimeType(trustlesshttp.MimeTypeRaw)}
+
 	for _, tc := range []struct {
 		name     string
 		query    string
+		accepts  []trustlesshttp.ContentType
 		expected string
 		err      string
 	}{
-		{"no filename", "", "", ""},
-		{"boop.car", "filename=boop.car", "boop.car", ""},
-		{"blank (err)", "filename=", "", "invalid filename parameter; missing extension"},
-		{"no .car (err)", "filename=bork", "", "invalid filename parameter; missing extension"},
-		{"bad extensio (err)", "filename=bork.exe", "", "invalid filename parameter; unsupported extension: \".exe\""},
+		{"no filename", "", carAccepts, "", ""},
+		{"boop.car with CAR accept", "filename=boop.car", carAccepts, "boop.car", ""},
+		{"boop.bin with raw accept", "filename=boop.bin", rawAccepts, "boop.bin", ""},
+		{"boop.car with both accepts", "filename=boop.car", bothAccepts, "boop.car", ""},
+		{"boop.bin with both accepts", "filename=boop.bin", bothAccepts, "boop.bin", ""},
+		{"blank (err)", "filename=", carAccepts, "", "invalid filename parameter; missing extension"},
+		{"no extension (err)", "filename=bork", carAccepts, "", "invalid filename parameter; missing extension"},
+		{"bad extension (err)", "filename=bork.exe", carAccepts, "", "invalid filename parameter; unsupported extension: \".exe\""},
+		{".car with raw accept (err)", "filename=boop.car", rawAccepts, "", ".car extension requires CAR response format"},
+		{".bin with CAR accept (err)", "filename=boop.bin", carAccepts, "", ".bin extension requires raw response format"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			req := &http.Request{}
 			req.URL = &url.URL{RawQuery: tc.query}
-			filename, err := trustlesshttp.ParseFilename(req)
+			filename, err := trustlesshttp.ParseFilename(req, tc.accepts)
 			if tc.err == "" {
 				require.NoError(t, err)
 				require.Equal(t, tc.expected, filename)

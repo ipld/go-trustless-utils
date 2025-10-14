@@ -42,20 +42,38 @@ func ParseByteRange(req *http.Request) (*trustlessutils.ByteRange, error) {
 }
 
 // ParseFilename returns the filename query parameter or an error if the
-// filename extension is not ".car". Lassie only supports returning CAR data.
+// filename extension is not valid for the requested response type.
+// Accepts .car extension for CAR responses and .bin extension for raw block responses.
 // See https://specs.ipfs.tech/http-gateways/path-gateway/#filename-request-query-parameter
-func ParseFilename(req *http.Request) (string, error) {
-	// check if provided filename query parameter has .car extension
+func ParseFilename(req *http.Request, accepts []ContentType) (string, error) {
+	// check if provided filename query parameter has valid extension
 	if req.URL.Query().Has("filename") {
 		filename := req.URL.Query().Get("filename")
 		ext := filepath.Ext(filename)
 		if ext == "" {
 			return "", errors.New("invalid filename parameter; missing extension")
 		}
-		if ext != FilenameExtCar {
-			return "", fmt.Errorf("invalid filename parameter; unsupported extension: %q", ext)
+
+		// Validate extension matches response type
+		if ext == FilenameExtCar {
+			// .car is valid for CAR responses
+			for _, accept := range accepts {
+				if accept.IsCar() {
+					return filename, nil
+				}
+			}
+			return "", fmt.Errorf("invalid filename parameter; %s extension requires CAR response format", FilenameExtCar)
+		} else if ext == FilenameExtRaw {
+			// .bin is valid for raw block responses
+			for _, accept := range accepts {
+				if accept.IsRaw() {
+					return filename, nil
+				}
+			}
+			return "", fmt.Errorf("invalid filename parameter; %s extension requires raw response format", FilenameExtRaw)
 		}
-		return filename, nil
+
+		return "", fmt.Errorf("invalid filename parameter; unsupported extension: %q", ext)
 	}
 	return "", nil
 }
