@@ -100,16 +100,39 @@ func ParseFilename(req *http.Request, accepts []ContentType) (string, error) {
 // parameters
 // https://specs.ipfs.tech/http-gateways/path-gateway/#format-request-query-parameter
 //
-// Per the spec: "When both Accept HTTP header and format query parameter are
-// present, Accept SHOULD take precedence." However, wildcard Accept headers
-// (*/* and application/*) are treated as having no format preference, allowing
-// the format parameter to be used instead.
+// Per IPIP-523: the format query parameter takes precedence over the Accept
+// header. CAR option query parameters (car-version, car-order, car-dups) also
+// take precedence over the corresponding parameters in the Accept header.
 func CheckFormat(req *http.Request) ([]ContentType, error) {
-	format := req.URL.Query().Get("format")
+	query := req.URL.Query()
+
+	format := query.Get("format")
 	switch format {
 	case "", FormatParameterCar, FormatParameterRaw:
 	default:
 		return nil, fmt.Errorf("invalid format parameter; unsupported: %q", format)
+	}
+
+	// Validate CAR option query parameters (IPIP-523)
+	carOrder := query.Get("car-order")
+	if carOrder != "" {
+		switch carOrder {
+		case "dfs", "unk":
+		default:
+			return nil, fmt.Errorf("invalid car-order parameter; unsupported: %q", carOrder)
+		}
+	}
+	carDups := query.Get("car-dups")
+	if carDups != "" {
+		switch carDups {
+		case "y", "n":
+		default:
+			return nil, fmt.Errorf("invalid car-dups parameter; unsupported: %q", carDups)
+		}
+	}
+	carVersion := query.Get("car-version")
+	if carVersion != "" && carVersion != MimeTypeCarVersion {
+		return nil, fmt.Errorf("invalid car-version parameter; unsupported: %q", carVersion)
 	}
 
 	accept := req.Header.Get("Accept")
@@ -118,61 +141,57 @@ func CheckFormat(req *http.Request) ([]ContentType, error) {
 	var accepts []ContentType
 	if accept != "" {
 		accepts = ParseAccept(accept)
-		if len(accepts) == 0 {
-			// Invalid Accept header - if we have a format parameter, use it
-			if format != "" {
-				switch format {
-				case FormatParameterCar:
-					return []ContentType{DefaultContentType().WithMimeType(MimeTypeCar)}, nil
-				case FormatParameterRaw:
-					return []ContentType{DefaultContentType().WithMimeType(MimeTypeRaw)}, nil
-				}
-			}
+		if len(accepts) == 0 && format == "" {
 			return nil, fmt.Errorf("invalid Accept header; unsupported: %q", accept)
 		}
 	}
 
-	// Check if Accept is a wildcard (essentially no preference)
-	hasWildcardAccept := false
-	if len(accepts) > 0 {
-		// If the highest priority Accept is a wildcard, treat as no preference
-		if accepts[0].MimeType == "*/*" || accepts[0].MimeType == "application/*" {
-			hasWildcardAccept = true
-		}
-	}
+	var result []ContentType
 
-	// Spec says Accept should take precedence over format parameter
-	// However, wildcards are treated as no preference
-	if len(accepts) > 0 && !hasWildcardAccept {
-		// Specific Accept header takes precedence
-		return accepts, nil
-	}
-
-	// No specific Accept preference (either no Accept, invalid Accept with format, or wildcard)
-	// Use format parameter if present
+	// Per IPIP-523: format query parameter takes precedence over Accept header
 	if format != "" {
 		switch format {
 		case FormatParameterCar:
-			// If we have CAR accepts (even wildcards), try to inherit parameters
+			ct := DefaultContentType()
+			// If Accept also specifies CAR, inherit its params as defaults
 			for _, a := range accepts {
-				if a.IsCar() {
-					return []ContentType{a.WithMimeType(MimeTypeCar)}, nil
+				if a.MimeType == MimeTypeCar {
+					ct = a.WithQuality(1)
+					break
 				}
 			}
-			return []ContentType{DefaultContentType().WithMimeType(MimeTypeCar)}, nil
+			result = []ContentType{ct}
 		case FormatParameterRaw:
-			return []ContentType{DefaultContentType().WithMimeType(MimeTypeRaw)}, nil
+			result = []ContentType{DefaultContentType().WithMimeType(MimeTypeRaw)}
+		}
+	} else if len(accepts) > 0 {
+		result = accepts
+	} else {
+		return nil, fmt.Errorf("neither a valid Accept header nor format parameter were provided")
+	}
+
+	// Per IPIP-523: CAR option query parameters take precedence over
+	// parameters in the Accept header
+	if carOrder != "" || carDups != "" {
+		for i := range result {
+			if result[i].MimeType == MimeTypeCar {
+				switch carOrder {
+				case "dfs":
+					result[i].Order = ContentTypeOrderDfs
+				case "unk":
+					result[i].Order = ContentTypeOrderUnk
+				}
+				switch carDups {
+				case "y":
+					result[i].Duplicates = true
+				case "n":
+					result[i].Duplicates = false
+				}
+			}
 		}
 	}
 
-	// Wildcard Accept with no format parameter - return the wildcard accepts
-	// This allows the caller to convert wildcards to a sensible default
-	// (typically CAR format)
-	if len(accepts) > 0 {
-		return accepts, nil
-	}
-
-	return nil, fmt.Errorf("neither a valid Accept header nor format parameter were provided")
+	return result, nil
 }
 
 // ParseAccept validates a request Accept header and returns whether or not
