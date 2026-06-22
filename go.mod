@@ -8,7 +8,7 @@ require (
 	github.com/ipfs/go-cid v0.6.1
 	github.com/ipfs/go-ipld-format v0.6.3
 	github.com/ipfs/go-unixfsnode v1.10.4
-	github.com/ipld/go-car/v2 v2.16.0
+	github.com/ipld/go-car/v2 v2.17.0
 	github.com/ipld/go-codec-dagpb v1.7.0
 	github.com/ipld/go-ipld-prime v0.23.0
 	github.com/ipld/ipld/specs v0.0.0-20231012031213-54d3b21deda4
