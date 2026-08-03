@@ -57,8 +57,8 @@ github.com/ipfs/go-metrics-interface v0.3.0 h1:YwG7/Cy4R94mYDUuwsBfeziJCVm9pBMJ6
 github.com/ipfs/go-metrics-interface v0.3.0/go.mod h1:OxxQjZDGocXVdyTPocns6cOLwHieqej/jos7H4POwoY=
 github.com/ipfs/go-test v0.3.0 h1:0Y4Uve3tp9HI+2lIJjfOliOrOgv/YpXg/l1y3P4DEYE=
 github.com/ipfs/go-test v0.3.0/go.mod h1:JK+U8pRpATZb7lsYNSJlCj3WYB3cFfWIbI6nWRM/GFk=
-github.com/ipfs/go-unixfsnode v1.10.5 h1:V34JV7fM90y+2ZUef7ToShjmwAZ8oo1yP7zrpWzC5L4=
-github.com/ipfs/go-unixfsnode v1.10.5/go.mod h1:u/9Ukl+XYpfKTMu+NXQqxbzAJVTwSCoyTYBGgE+JdSE=
+github.com/ipfs/go-unixfsnode v1.10.6 h1:0rnKD4azJad4cT8t6wITqNl9Q0GTjB+YRBfMQ39C7Sw=
+github.com/ipfs/go-unixfsnode v1.10.6/go.mod h1:u/9Ukl+XYpfKTMu+NXQqxbzAJVTwSCoyTYBGgE+JdSE=
 github.com/ipld/go-car/v2 v2.17.0 h1:zgjSxf/lQNYcQPX08cvb5rSdEY8sv5OOnQIsZhZMPx4=
 github.com/ipld/go-car/v2 v2.17.0/go.mod h1:/4HY8tFZ1q42Mw54ILLPQfjkUqMJxFKqY1yMDKHlYko=
 github.com/ipld/go-codec-dagpb v1.7.0 h1:hpuvQjCSVSLnTnHXn+QAMR0mLmb1gA6wl10LExo2Ts0=
